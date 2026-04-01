@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Sheets and Trackers</title>
+<style>
+:root{
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --primary:#4f46e5;
+  --text:#1f2937;
+  --muted:#6b7280;
+}
+body{margin:0;font-family:Inter, Arial, sans-serif;background:var(--bg);color:var(--text)}
+.header{background:var(--primary);color:#fff;padding:20px;text-align:center;font-size:24px;font-weight:600}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:15px;justify-content:space-between}
+input,select,button{padding:10px;border-radius:8px;border:1px solid #ddd}
+button{background:var(--primary);color:#fff;border:none;cursor:pointer}
+.container{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;padding:20px}
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 8px 20px rgba(0,0,0,0.08);transition:.2s}
+.card:hover{transform:translateY(-6px)}
+.title{font-size:18px;font-weight:600}
+.desc{margin:10px 0;color:var(--muted)}
+.button{display:inline-block;padding:8px 14px;background:var(--primary);color:#fff;text-decoration:none;border-radius:8px;font-size:14px}
+.status{margin-top:8px;font-size:12px;font-weight:600}
+.active{color:green}.pending{color:orange}.completed{color:gray}
+iframe{width:100%;height:200px;border:none;border-radius:10px;margin-top:10px}
+.form{display:flex;gap:10px;flex-wrap:wrap;padding:15px}
+.form input, .form select{flex:1}
+</style>
+</head>
+<body>
+
+<div class="header">📊 All Sheets and Trackers</div>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="Search projects..." onkeyup="filterCards()">
+  <select id="statusFilter" onchange="filterCards()">
+    <option value="all">All Status</option>
+    <option value="active">Active</option>
+    <option value="pending">Pending</option>
+    <option value="completed">Completed</option>
+  </select>
+</div>
+
+<!-- Add New Card Form -->
+<div class="form">
+  <input type="text" id="newTitle" placeholder="Title">
+  <input type="text" id="newDesc" placeholder="Description">
+  <input type="text" id="newLink" placeholder="Link (Sheet or Dashboard)">
+  <select id="newStatus">
+    <option value="active">Active</option>
+    <option value="pending">Pending</option>
+    <option value="completed">Completed</option>
+  </select>
+  <button onclick="addCard()">Add Card</button>
+</div>
+
+<div class="container" id="cards"></div>
+
+<script>
+let cardsData = [
+  {title:'Sales Tracker',desc:'Tracks daily sales performance.',link:'#',status:'active'},
+  {title:'Hiring Pipeline',desc:'Candidate tracking system.',link:'#',status:'pending'},
+  {title:'Marketing Plan',desc:'Campaign execution tracker.',link:'#',status:'completed'},
+  {title:'Main Dashboard',desc:'Open another HTML dashboard.',link:'dashboard.html',status:'active'}
+];
+
+function renderCards(){
+  const container = document.getElementById('cards');
+  container.innerHTML='';
+
+  cardsData.forEach((card,index)=>{
+    container.innerHTML += `
+      <div class="card" data-status="${card.status}">
+        <div class="title" contenteditable="true" onblur="updateCard(${index},'title',this.innerText)">${card.title}</div>
+        <div class="desc" contenteditable="true" onblur="updateCard(${index},'desc',this.innerText)">${card.desc}</div>
+        <a class="button" href="${card.link}" target="_blank">Open</a>
+        <div class="status ${card.status}">${card.status}</div>
+      </div>
+    `;
+  });
+}
+
+function addCard(){
+  const title=document.getElementById('newTitle').value;
+  const desc=document.getElementById('newDesc').value;
+  const link=document.getElementById('newLink').value;
+  const status=document.getElementById('newStatus').value;
+
+  if(!title || !link){alert('Title and link required');return;}
+
+  cardsData.push({title,desc,link,status});
+  renderCards();
+}
+
+function updateCard(index,field,value){
+  cardsData[index][field]=value;
+}
+
+function filterCards(){
+  let search = document.getElementById('search').value.toLowerCase();
+  let status = document.getElementById('statusFilter').value;
+  let cards = document.querySelectorAll('.card');
+
+  cards.forEach(card => {
+    let title = card.querySelector('.title').innerText.toLowerCase();
+    let cardStatus = card.getAttribute('data-status');
+
+    let matchesSearch = title.includes(search);
+    let matchesStatus = (status === 'all' || status === cardStatus);
+
+    card.style.display = (matchesSearch && matchesStatus) ? 'block' : 'none';
+  });
+}
+
+renderCards();
+</script>
+
+</body>
+</html>
