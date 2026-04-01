@@ -25,9 +25,9 @@ button{background:var(--primary);color:#fff;border:none;cursor:pointer}
 .button{display:inline-block;padding:8px 14px;background:var(--primary);color:#fff;text-decoration:none;border-radius:8px;font-size:14px}
 .status{margin-top:8px;font-size:12px;font-weight:600}
 .active{color:green}.pending{color:orange}.completed{color:gray}
-iframe{width:100%;height:200px;border:none;border-radius:10px;margin-top:10px}
 .form{display:flex;gap:10px;flex-wrap:wrap;padding:15px}
 .form input, .form select{flex:1}
+.card select{margin-top:10px}
 </style>
 </head>
 <body>
@@ -60,12 +60,12 @@ iframe{width:100%;height:200px;border:none;border-radius:10px;margin-top:10px}
 <div class="container" id="cards"></div>
 
 <script>
-let cardsData = [
-  {title:'Sales Tracker',desc:'Tracks daily sales performance.',link:'#',status:'active'},
-  {title:'Hiring Pipeline',desc:'Candidate tracking system.',link:'#',status:'pending'},
-  {title:'Marketing Plan',desc:'Campaign execution tracker.',link:'#',status:'completed'},
-  {title:'Main Dashboard',desc:'Open another HTML dashboard.',link:'dashboard.html',status:'active'}
-];
+// Load saved data from localStorage
+let cardsData = JSON.parse(localStorage.getItem('cardsData')) || [];
+
+function saveData(){
+  localStorage.setItem('cardsData', JSON.stringify(cardsData));
+}
 
 function renderCards(){
   const container = document.getElementById('cards');
@@ -78,6 +78,11 @@ function renderCards(){
         <div class="desc" contenteditable="true" onblur="updateCard(${index},'desc',this.innerText)">${card.desc}</div>
         <a class="button" href="${card.link}" target="_blank">Open</a>
         <div class="status ${card.status}">${card.status}</div>
+        <select onchange="changeStatus(${index}, this.value)">
+          <option value="active" ${card.status==='active'?'selected':''}>Active</option>
+          <option value="pending" ${card.status==='pending'?'selected':''}>Pending</option>
+          <option value="completed" ${card.status==='completed'?'selected':''}>Completed</option>
+        </select>
       </div>
     `;
   });
@@ -92,11 +97,25 @@ function addCard(){
   if(!title || !link){alert('Title and link required');return;}
 
   cardsData.push({title,desc,link,status});
+  saveData();
   renderCards();
+
+  // Reset fields
+  document.getElementById('newTitle').value='';
+  document.getElementById('newDesc').value='';
+  document.getElementById('newLink').value='';
+  document.getElementById('newStatus').value='active';
 }
 
 function updateCard(index,field,value){
   cardsData[index][field]=value;
+  saveData();
+}
+
+function changeStatus(index,value){
+  cardsData[index].status=value;
+  saveData();
+  renderCards();
 }
 
 function filterCards(){
