@@ -122,26 +122,69 @@ body {
   padding: 2px 4px;
 }
 
-.delete-btn {
-  background: var(--danger-bg);
-  color: var(--danger);
-  border: 1px solid var(--danger-border);
-  border-radius: 8px;
-  cursor: pointer;
-  padding: 6px 10px;
-  font-size: 13px;
-  line-height: 1;
+/* 3-dot menu */
+.menu-wrapper {
+  position: relative;
   flex-shrink: 0;
-  transition: background .15s, color .15s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
-.delete-btn:hover {
-  background: var(--danger);
-  color: #fff;
-  border-color: var(--danger);
+.dots-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 18px;
+  color: var(--muted);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: background .15s;
+}
+
+.dots-btn:hover {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+.dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 130px;
+  overflow: hidden;
+}
+
+.dropdown.open { display: block; }
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  transition: background .12s;
+}
+
+.dropdown-item:hover { background: #f9fafb; }
+
+.dropdown-item.danger {
+  color: var(--danger);
+}
+
+.dropdown-item.danger:hover {
+  background: var(--danger-bg);
 }
 
 .desc {
@@ -185,9 +228,9 @@ body {
   text-transform: capitalize;
 }
 
-.badge-active   { background: #d1fae5; color: #065f46; }
-.badge-pending  { background: #fef3c7; color: #92400e; }
-.badge-completed{ background: #f3f4f6; color: #374151; }
+.badge-active    { background: #d1fae5; color: #065f46; }
+.badge-pending   { background: #fef3c7; color: #92400e; }
+.badge-completed { background: #f3f4f6; color: #374151; }
 
 .status-select {
   padding: 5px 8px;
@@ -247,6 +290,20 @@ function badgeClass(status) {
   return status === 'active' ? 'badge-active' : status === 'pending' ? 'badge-pending' : 'badge-completed';
 }
 
+function closeAllMenus() {
+  document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+}
+
+function toggleMenu(idx, event) {
+  event.stopPropagation();
+  const menu = document.getElementById('menu-' + idx);
+  const wasOpen = menu.classList.contains('open');
+  closeAllMenus();
+  if (!wasOpen) menu.classList.add('open');
+}
+
+document.addEventListener('click', closeAllMenus);
+
 function renderCards() {
   const sf = document.getElementById('statusFilter').value;
   const sq = document.getElementById('search').value.toLowerCase();
@@ -269,17 +326,20 @@ function renderCards() {
     <div class="card" data-status="${card.status}">
       <div class="card-header">
         <div class="title" contenteditable="true" onblur="updateCard(${idx}, 'title', this.innerText)">${card.title}</div>
-        <button class="delete-btn" onclick="deleteCard(${idx})" title="Delete card">
-          🗑 Delete
-        </button>
+        <div class="menu-wrapper">
+          <button class="dots-btn" onclick="toggleMenu(${idx}, event)" title="Options">⋮</button>
+          <div class="dropdown" id="menu-${idx}">
+            <button class="dropdown-item danger" onclick="deleteCard(${idx})">🗑 Delete card</button>
+          </div>
+        </div>
       </div>
       <div class="desc" contenteditable="true" onblur="updateCard(${idx}, 'desc', this.innerText)">${card.desc || ''}</div>
       <a class="button" href="${card.link}" target="_blank">Open ↗</a>
       <div class="status-row">
         <span class="status-badge ${badgeClass(card.status)}">${card.status}</span>
         <select class="status-select" onchange="changeStatus(${idx}, this.value)">
-          <option value="active"  ${card.status === 'active'   ? 'selected' : ''}>Active</option>
-          <option value="pending" ${card.status === 'pending'  ? 'selected' : ''}>Pending</option>
+          <option value="active"    ${card.status === 'active'    ? 'selected' : ''}>Active</option>
+          <option value="pending"   ${card.status === 'pending'   ? 'selected' : ''}>Pending</option>
           <option value="completed" ${card.status === 'completed' ? 'selected' : ''}>Completed</option>
         </select>
       </div>
@@ -306,6 +366,7 @@ function addCard() {
 }
 
 function deleteCard(idx) {
+  closeAllMenus();
   if (!confirm(`Delete "${cardsData[idx].title}"?\n\nThis cannot be undone.`)) return;
   cardsData.splice(idx, 1);
   saveData();
