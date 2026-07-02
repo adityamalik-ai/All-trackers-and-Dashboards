@@ -28,10 +28,38 @@ body {
   background: var(--primary);
   color: #fff;
   padding: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   font-size: 24px;
   font-weight: 600;
 }
+
+.header-actions {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.header-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.header-btn:hover { background: rgba(255,255,255,0.25); }
 
 .toolbar {
   display: flex;
@@ -249,11 +277,40 @@ body {
   color: var(--muted);
   font-size: 16px;
 }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1f2937;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 </style>
 </head>
 <body>
 
-<div class="header">📊 All Sheets and Trackers</div>
+<div class="header">
+  📊 All Sheets and Trackers
+  <div class="header-actions">
+    <button class="header-btn" onclick="exportData()" title="Download your cards as a JSON file">⬇ Export</button>
+    <button class="header-btn" onclick="document.getElementById('importFile').click()" title="Load cards from a JSON file">⬆ Import</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
 
 <div class="toolbar">
   <input type="text" id="search" placeholder="Search projects..." oninput="filterCards()">
@@ -279,11 +336,82 @@ body {
 
 <div class="container" id="cards"></div>
 
+<div class="toast" id="toast"></div>
+
 <script>
 let cardsData = JSON.parse(localStorage.getItem('cardsData')) || [];
 
 function saveData() {
   localStorage.setItem('cardsData', JSON.stringify(cardsData));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------------- Export / Import (manual cross-device sync) ---------------- */
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(cardsData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `trackers-dashboard-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('Downloaded. Move this file to your other device and use Import there.');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let incoming;
+    try {
+      incoming = JSON.parse(e.target.result);
+      if (!Array.isArray(incoming)) throw new Error('not an array');
+    } catch (err) {
+      alert('That file doesn\'t look like a valid export from this dashboard.');
+      event.target.value = '';
+      return;
+    }
+
+    const hasExisting = cardsData.length > 0;
+    const replace = !hasExisting || confirm(
+      `Import ${incoming.length} card(s).\n\n` +
+      `Click OK to REPLACE your current ${cardsData.length} card(s), ` +
+      `or Cancel to MERGE (add the new ones, keep existing).`
+    );
+
+    if (replace) {
+      cardsData = incoming;
+    } else {
+      // Merge: skip cards that look identical (same title + link)
+      const existingKeys = new Set(cardsData.map(c => c.title + '|' + c.link));
+      incoming.forEach(c => {
+        const key = c.title + '|' + c.link;
+        if (!existingKeys.has(key)) {
+          cardsData.push(c);
+          existingKeys.add(key);
+        }
+      });
+    }
+
+    saveData();
+    renderCards();
+    showToast(replace ? 'Import complete — replaced your cards.' : 'Import complete — merged new cards in.');
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function badgeClass(status) {
